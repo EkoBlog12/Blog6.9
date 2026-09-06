@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>הכספת</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;700;900&family=Heebo:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14110D;
+    --panel:#1E1A14;
+    --panel-line:#332C22;
+    --brass:#C6963F;
+    --brass-dim:#8C6B33;
+    --text:#F1EAD9;
+    --text-dim:#A89A82;
+    --green:#3F7A57;
+    --yellow:#C98A2E;
+    --purple:#7C5FA8;
+    --absent:#2A251E;
+    --absent-line:#3A332A;
+    --error:#B24A3C;
+    --radius:6px;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #221C13 0%, var(--bg) 55%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Heebo', sans-serif;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:32px 20px 64px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+
+  .eyebrow{
+    color:var(--brass);
+    font-size:14px;
+    letter-spacing:0.02em;
+    margin-bottom:10px;
+  }
+
+  h1{
+    font-family:'Frank Ruhl Libre', serif;
+    font-weight:900;
+    font-size:clamp(38px, 8vw, 58px);
+    margin:0 0 6px;
+    color:var(--text);
+    letter-spacing:0.01em;
+  }
+
+  .sub{
+    color:var(--text-dim);
+    font-size:16px;
+    max-width:420px;
+    text-align:center;
+    line-height:1.6;
+    margin-bottom:36px;
+  }
+
+  .legend{
+    display:flex;
+    gap:18px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:28px;
+    font-size:13px;
+    color:var(--text-dim);
+  }
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .swatch{width:14px; height:14px; border-radius:3px; display:inline-block;}
+  .swatch.g{background:var(--green);}
+  .swatch.y{background:var(--yellow);}
+  .swatch.p{background:var(--purple);}
+
+  #board{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin-bottom:24px;
+    width:100%;
+    max-width:480px;
+    overflow-x:auto;
+    padding-bottom:2px;
+  }
+
+  .row{
+    display:flex;
+    justify-content:center;
+    gap:22px;
+  }
+
+  .word-group{
+    display:flex;
+    gap:4px;
+  }
+
+  .tile{
+    width:30px;
+    height:38px;
+    border:2px solid var(--absent-line);
+    border-radius:var(--radius);
+    background:var(--panel);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-family:'JetBrains Mono', monospace;
+    font-weight:700;
+    font-size:16px;
+    color:var(--text);
+    position:relative;
+  }
+
+  @media (min-width: 520px){
+    .row{ gap:36px; }
+    .word-group{ gap:6px; }
+    .tile{ width:44px; height:52px; font-size:22px; }
+  }
+
+  .tile.active-cell{
+    border-color:var(--brass);
+  }
+
+  .tile.green{ background:var(--green); border-color:var(--green); color:#fff;}
+  .tile.yellow{ background:var(--yellow); border-color:var(--yellow); color:#241a05;}
+  .tile.purple{ background:var(--purple); border-color:var(--purple); color:#fff;}
+  .tile.absent{ background:var(--absent); border-color:var(--absent-line); color:var(--text-dim);}
+
+  .tile .mark{
+    position:absolute;
+    bottom:3px;
+    left:5px;
+    font-size:9px;
+    opacity:0.75;
+  }
+
+  input.tile{
+    -webkit-appearance:none;
+    appearance:none;
+    padding:0;
+    outline:none;
+    text-align:center;
+    caret-color:var(--brass);
+  }
+  input.tile:focus{
+    border-color:var(--brass);
+  }
+
+  #check-btn{
+    margin-top:6px;
+    margin-bottom:28px;
+    font-size:14px;
+  }
+  #check-btn:disabled{
+    opacity:0.4;
+    cursor:not-allowed;
+  }
+
+  #attempts{
+    color:var(--text-dim);
+    font-size:13px;
+    margin-top:-10px;
+    margin-bottom:16px;
+  }
+
+  /* Vault */
+  #vault-stage{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    margin-top:8px;
+  }
+
+  .vault-wrap{
+    position:relative;
+    width:220px;
+    height:220px;
+    margin-bottom:28px;
+    perspective:900px;
+  }
+
+  .vault-interior{
+    position:absolute;
+    inset:0;
+    border-radius:50%;
+    background: var(--bg);
+    box-shadow: inset 0 0 26px rgba(0,0,0,0.8);
+  }
+
+  .vault-door{
+    position:absolute;
+    inset:0;
+    transform-origin: 0% 50%;
+    transform-style:preserve-3d;
+    transition: transform 0.5s cubic-bezier(.22,1,.36,1), filter 0.5s ease;
+    filter: drop-shadow(0 6px 14px rgba(0,0,0,0.55));
+  }
+
+  .vault-door.open{
+    transform: rotateY(-118deg);
+    filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3));
+  }
+
+  #wheel-group{
+    transform-origin:100px 100px;
+    transition: transform 0.5s cubic-bezier(.45,0,.2,1);
+  }
+  #wheel-group.spin{
+    transform: rotate(360deg);
+  }
+
+  .code-inputs{
+    display:flex;
+    gap:10px;
+    margin-bottom:18px;
+  }
+
+  .code-inputs input{
+    width:46px;
+    height:56px;
+    text-align:center;
+    font-family:'JetBrains Mono', monospace;
+    font-size:24px;
+    font-weight:700;
+    color:var(--text);
+    background:var(--panel);
+    border:2px solid var(--panel-line);
+    border-radius:var(--radius);
+    direction:ltr;
+  }
+  .code-inputs input:focus{
+    outline:none;
+    border-color:var(--brass);
+  }
+
+  .code-inputs.shake{
+    animation: shake 0.4s ease;
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-8px);}
+    40%{transform:translateX(8px);}
+    60%{transform:translateX(-6px);}
+    80%{transform:translateX(6px);}
+  }
+
+  button{
+    font-family:'Heebo', sans-serif;
+    font-weight:700;
+    font-size:15px;
+    padding:12px 28px;
+    border-radius:var(--radius);
+    border:none;
+    background:var(--brass);
+    color:#221806;
+    cursor:pointer;
+    transition:transform 0.15s ease, background 0.15s ease;
+  }
+  button:hover{ background:#d9ab5c; }
+  button:active{ transform:scale(0.97); }
+
+  #vault-error{
+    color:var(--error);
+    font-size:13px;
+    margin-top:12px;
+    min-height:16px;
+  }
+
+  #success{
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    margin-top:8px;
+    animation: fadein 0.6s ease;
+  }
+  @keyframes fadein{ from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+
+  #success h2{
+    font-family:'Frank Ruhl Libre', serif;
+    font-size:32px;
+    color:var(--brass);
+    margin:0 0 8px;
+  }
+  #success p{
+    color:var(--text-dim);
+    font-size:14px;
+  }
+
+</style>
+</head>
+<body>
+
+  <div class="eyebrow" id="eyebrow">שלב 1</div>
+  <h1>הכספת</h1>
+  <p class="sub" id="subtitle">מצאו את הביטוי הנסתר. כל אות תיצבע לפי מיקומה — נסו כמה פעמים שצריך, אין הגבלה.</p>
+
+  <div class="legend" id="legend">
+    <span><span class="swatch g"></span> במקום הנכון</span>
+    <span><span class="swatch y"></span> באותה מילה, מקום אחר</span>
+    <span><span class="swatch p"></span> במילה האחרת</span>
+  </div>
+
+  <div id="puzzle-stage">
+    <div id="board"></div>
+    <div id="attempts"></div>
+    <button id="check-btn">בדקו</button>
+  </div>
+
+  <div id="vault-stage">
+    <div class="vault-wrap">
+      <div class="vault-interior"></div>
+      <div class="vault-door" id="vault-door">
+        <svg viewBox="0 0 200 200" width="100%" height="100%">
+          <defs>
+            <radialGradient id="doorGrad" cx="35%" cy="30%" r="75%">
+              <stop offset="0%" stop-color="#4a3d26"/>
+              <stop offset="55%" stop-color="#221b10"/>
+              <stop offset="100%" stop-color="#100c07"/>
+            </radialGradient>
+            <radialGradient id="hubGrad" cx="38%" cy="32%" r="70%">
+              <stop offset="0%" stop-color="#efd08c"/>
+              <stop offset="55%" stop-color="#b8873b"/>
+              <stop offset="100%" stop-color="#7a5a28"/>
+            </radialGradient>
+          </defs>
+
+          <circle cx="100" cy="100" r="96" fill="url(#doorGrad)" stroke="#0a0704" stroke-width="4"/>
+          <circle cx="100" cy="100" r="96" fill="none" stroke="#5a4a30" stroke-width="1" opacity="0.5"/>
+
+          <g fill="#5a4a30" stroke="#241d10" stroke-width="1">
+            <circle cx="182" cy="100" r="4"/>
+            <circle cx="171" cy="141" r="4"/>
+            <circle cx="141" cy="171" r="4"/>
+            <circle cx="100" cy="182" r="4"/>
+            <circle cx="59" cy="171" r="4"/>
+            <circle cx="29" cy="141" r="4"/>
+            <circle cx="18" cy="100" r="4"/>
+            <circle cx="29" cy="59" r="4"/>
+            <circle cx="59" cy="29" r="4"/>
+            <circle cx="100" cy="18" r="4"/>
+            <circle cx="141" cy="29" r="4"/>
+            <circle cx="171" cy="59" r="4"/>
+          </g>
+
+          <g id="wheel-group">
+            <g stroke="#8a6a34" stroke-width="10" stroke-linecap="round">
+              <line x1="100" y1="26" x2="100" y2="60"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(45 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(90 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(135 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(180 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(225 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(270 100 100)"/>
+              <line x1="100" y1="26" x2="100" y2="60" transform="rotate(315 100 100)"/>
+            </g>
+            <circle cx="100" cy="100" r="27" fill="url(#hubGrad)" stroke="#4a3616" stroke-width="3"/>
+            <circle cx="100" cy="100" r="9" fill="#2c2313"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="code-inputs" id="code-inputs" dir="ltr">
+      <input maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input maxlength="1" inputmode="numeric" pattern="[0-9]">
+      <input maxlength="1" inputmode="numeric" pattern="[0-9]">
+    </div>
+    <button id="open-btn">פתחו את הכספת</button>
+    <div id="vault-error"></div>
+  </div>
+
+  <div id="success">
+    <h2>הצלחתם 🔓</h2>
+    <p>הכספת נפתחה.</p>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---- Puzzle configuration (word lengths are public; the letters are not) ----
+  const WORD_LENGTHS = [3, 8];
+  const TOTAL_LEN = WORD_LENGTHS.reduce((a,b)=>a+b, 0);
+
+  // Secret phrase stored only as an XOR+base64 obfuscated blob, decoded transiently
+  // inside checkGuess(). It is never written to a persistent global variable.
+  const ENC_KEY = "vaultKey7x!";
+  const ENC_WORD_1 = "ocCi+aPY";
+  const ENC_WORD_2 = "ofCi/KPssuzg6fbqtuC75g==";
+
+  function xorDecode(b64, key){
+    const bin = atob(b64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const keyBytes = new TextEncoder().encode(key);
+    const out = new Uint8Array(bytes.length);
+    for (let i=0;i<bytes.length;i++) out[i] = bytes[i] ^ keyBytes[i % keyBytes.length];
+    return new TextDecoder("utf-8").decode(out);
+  }
+
+  function getAnswerWords(){
+    return [
+      Array.from(xorDecode(ENC_WORD_1, ENC_KEY)),
+      Array.from(xorDecode(ENC_WORD_2, ENC_KEY))
+    ];
+  }
+
+  // ---- Vault code, verified via SHA-256, never stored in plaintext ----
+  const VAULT_HASH = "027ffe049491405f2a035703bea6c2d4e66e8f72a5c117e31092fbe786f3216a";
+
+  async function sha256Hex(str){
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  // ---- Game state ----
+  const guesses = []; // { chars: [...], feedback: [...] }
+  let current = new Array(TOTAL_LEN).fill("");
+  let focusIndex = 0;
+  let solved = false;
+
+  const HEBREW_RE = /[\u05D0-\u05EA]/;
+
+  const boardEl = document.getElementById("board");
+  const attemptsEl = document.getElementById("attempts");
+  const checkBtn = document.getElementById("check-btn");
+  const puzzleStage = document.getElementById("puzzle-stage");
+  const vaultStage = document.getElementById("vault-stage");
+
+  function splitIntoWords(flatChars){
+    const words = [];
+    let idx = 0;
+    for (const len of WORD_LENGTHS){
+      words.push(flatChars.slice(idx, idx+len));
+      idx += len;
+    }
+    return words;
+  }
+
+  function computeFeedback(guessFlat){
+    const guessWords = splitIntoWords(guessFlat);
+    const answerWords = getAnswerWords();
+    const nWords = answerWords.length;
+
+    const pools = answerWords.map(word => {
+      const m = new Map();
+      for (const ch of word) m.set(ch, (m.get(ch)||0)+1);
+      return m;
+    });
+
+    const result = answerWords.map(word => new Array(word.length).fill("absent"));
+
+    // Pass 1: greens
+    for (let w=0; w<nWords; w++){
+      for (let i=0;i<answerWords[w].length;i++){
+        if (guessWords[w][i] === answerWords[w][i]){
+          result[w][i] = "green";
+          const ch = guessWords[w][i];
+          pools[w].set(ch, pools[w].get(ch) - 1);
+        }
+      }
+    }
+
+    // Pass 2: yellow (same word) / purple (other word)
+    for (let w=0; w<nWords; w++){
+      for (let i=0;i<answerWords[w].length;i++){
+        if (result[w][i] === "green") continue;
+        const ch = guessWords[w][i];
+        if ((pools[w].get(ch)||0) > 0){
+          result[w][i] = "yellow";
+          pools[w].set(ch, pools[w].get(ch) - 1);
+        } else {
+          let otherIdx = -1;
+          for (let w2=0; w2<nWords; w2++){
+            if (w2 === w) continue;
+            if ((pools[w2].get(ch)||0) > 0){ otherIdx = w2; break; }
+          }
+          if (otherIdx !== -1){
+            result[w][i] = "purple";
+            pools[otherIdx].set(ch, pools[otherIdx].get(ch) - 1);
+          }
+        }
+      }
+    }
+
+    return result.flat();
+  }
+
+  function checkWin(feedback){
+    return feedback.every(f => f === "green");
+  }
+
+  function markForState(state){
+    if (state === "green") return "✓";
+    if (state === "yellow") return "↺";
+    if (state === "purple") return "⇄";
+    return "";
+  }
+
+  function render(){
+    boardEl.innerHTML = "";
+
+    guesses.forEach(g => {
+      boardEl.appendChild(makeRow(g.chars, g.feedback, false));
+    });
+
+    if (!solved){
+      boardEl.appendChild(makeRow(current, null, true));
+    }
+
+    attemptsEl.textContent = guesses.length > 0
+      ? `ניסיון מספר ${guesses.length + (solved ? 0 : 1)}`
+      : "";
+
+    checkBtn.disabled = !current.every(c => c !== "");
+
+    if (!solved){
+      const inputs = boardEl.querySelectorAll("input.tile");
+      const target = inputs[focusIndex];
+      if (target){
+        target.focus();
+        target.select();
+      }
+    }
+  }
+
+  function makeRow(chars, feedback, isActive){
+    const row = document.createElement("div");
+    row.className = "row";
+    let idx = 0;
+    WORD_LENGTHS.forEach(len => {
+      const group = document.createElement("div");
+      group.className = "word-group";
+      for (let i=0;i<len;i++){
+        const state = feedback ? feedback[idx] : null;
+
+        if (isActive){
+          const cellIndex = idx;
+          const input = document.createElement("input");
+          input.className = "tile";
+          input.value = chars[cellIndex] || "";
+          input.setAttribute("autocomplete", "off");
+          input.setAttribute("autocapitalize", "off");
+          input.setAttribute("spellcheck", "false");
+          input.setAttribute("maxlength", "1");
+          input.addEventListener("input", () => {
+            const raw = Array.from(input.value).filter(ch => HEBREW_RE.test(ch));
+            const ch = raw.length ? raw[raw.length - 1] : "";
+            current[cellIndex] = ch;
+            if (ch && cellIndex < TOTAL_LEN - 1){
+              focusIndex = cellIndex + 1;
+            } else {
+              focusIndex = cellIndex;
+            }
+            render();
+          });
+          input.addEventListener("keydown", (e) => {
+            if (e.key === "Backspace" && !input.value && cellIndex > 0){
+              e.preventDefault();
+              current[cellIndex - 1] = "";
+              focusIndex = cellIndex - 1;
+              render();
+            } else if (e.key === "Enter"){
+              submitGuess();
+            } else if (e.key === "ArrowRight" && cellIndex > 0){
+              focusIndex = cellIndex - 1;
+              render();
+            } else if (e.key === "ArrowLeft" && cellIndex < TOTAL_LEN - 1){
+              focusIndex = cellIndex + 1;
+              render();
+            }
+          });
+          input.addEventListener("focus", () => { focusIndex = cellIndex; });
+          group.appendChild(input);
+        } else {
+          const tile = document.createElement("div");
+          tile.className = "tile" + (state ? " " + state : "");
+          tile.textContent = chars[idx] || "";
+          if (state){
+            const mark = document.createElement("span");
+            mark.className = "mark";
+            mark.textContent = markForState(state);
+            tile.appendChild(mark);
+          }
+          group.appendChild(tile);
+        }
+        idx++;
+      }
+      row.appendChild(group);
+    });
+    return row;
+  }
+
+  function submitGuess(){
+    if (!current.every(c => c !== "")) return;
+    const chars = current.slice();
+    const feedback = computeFeedback(chars);
+    guesses.push({ chars, feedback });
+    const won = checkWin(feedback);
+    current = new Array(TOTAL_LEN).fill("");
+    focusIndex = 0;
+    render();
+    if (won){
+      solved = true;
+      setTimeout(() => {
+        puzzleStage.style.display = "none";
+        document.getElementById("eyebrow").style.display = "none";
+        document.getElementById("subtitle").style.display = "none";
+        document.getElementById("legend").style.display = "none";
+        vaultStage.style.display = "flex";
+        document.querySelector('.code-inputs input').focus();
+      }, 700);
+    }
+  }
+
+  checkBtn.addEventListener("click", submitGuess);
+
+  // ---- Vault stage ----
+  const codeInputs = Array.from(document.querySelectorAll(".code-inputs input"));
+  const codeInputsWrap = document.getElementById("code-inputs");
+  const openBtn = document.getElementById("open-btn");
+  const vaultError = document.getElementById("vault-error");
+  const vaultDoor = document.getElementById("vault-door");
+  const wheelGroup = document.getElementById("wheel-group");
+
+  codeInputs.forEach((inp, i) => {
+    inp.addEventListener("input", () => {
+      inp.value = inp.value.replace(/[^0-9]/g, "").slice(0,1);
+      if (inp.value && i < codeInputs.length - 1){
+        codeInputs[i+1].focus();
+      }
+    });
+    inp.addEventListener("keydown", (e) => {
+      if (e.key === "Backspace" && !inp.value && i > 0){
+        codeInputs[i-1].focus();
+      }
+      if (e.key === "Enter"){
+        attemptOpen();
+      }
+    });
+  });
+
+  async function attemptOpen(){
+    const code = codeInputs.map(i => i.value).join("");
+    if (code.length !== 4){
+      vaultError.textContent = "יש להזין 4 ספרות.";
+      return;
+    }
+    const hash = await sha256Hex(code);
+    if (hash === VAULT_HASH){
+      vaultError.textContent = "";
+      openBtn.disabled = true;
+      codeInputs.forEach(i => i.disabled = true);
+
+      wheelGroup.classList.add("spin");
+      vaultDoor.classList.add("open");
+      setTimeout(() => {
+        vaultStage.style.display = "none";
+        document.getElementById("success").style.display = "flex";
+      }, 550);
+    } else {
+      vaultError.textContent = "קוד שגוי, נסו שוב.";
+      codeInputsWrap.classList.remove("shake");
+      void codeInputsWrap.offsetWidth;
+      codeInputsWrap.classList.add("shake");
+    }
+  }
+
+  openBtn.addEventListener("click", attemptOpen);
+
+  render();
+})();
+</script>
+</body>
+</html>
